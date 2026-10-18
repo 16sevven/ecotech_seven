@@ -119,6 +119,24 @@ class DepartamentoDAO:
         return DepartamentoDAO._fila_de_departamento(fila)
 
     @staticmethod
+    def buscar_por_nombre(nombre):
+        conexion = abrir_conexion()
+        try:
+            cursor = conexion.cursor()
+            marca = marcador_sql()
+            cursor.execute(
+                "SELECT id, nombre, id_gerente FROM departamento "
+                f"WHERE LOWER(nombre) = LOWER({marca})",
+                (nombre.strip(),)
+            )
+            fila = cursor.fetchone()
+        finally:
+            conexion.close()
+        if fila is None:
+            return None
+        return DepartamentoDAO._fila_de_departamento(fila)
+
+    @staticmethod
     def listar():
         conexion = abrir_conexion()
         try:

@@ -27,6 +27,23 @@ class RegistroTiempoDAO:
             conexion.close()
 
     @staticmethod
+    def existe_registro(id_empleado, id_proyecto, fecha, descripcion):
+        """True si ya hay un registro identico (usado por la semilla para no duplicar)."""
+        conexion = abrir_conexion()
+        try:
+            cursor = conexion.cursor()
+            marca = marcador_sql()
+            cursor.execute(
+                "SELECT 1 FROM registro_tiempo "
+                f"WHERE empleado_id = {marca} AND proyecto_id = {marca} "
+                f"AND fecha_trabajada = {marca} AND descripcion_tarea = {marca}",
+                (id_empleado, id_proyecto, str(fecha), descripcion)
+            )
+            return cursor.fetchone() is not None
+        finally:
+            conexion.close()
+
+    @staticmethod
     def _fila_de_registroTiempo(fila):
         empleado = EmpleadoDAO.buscar_por_id(fila[4])
         proyecto = ProyectoDao.buscar_por_id(fila[5], cargar_relaciones=False)

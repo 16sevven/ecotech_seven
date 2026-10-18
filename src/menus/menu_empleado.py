@@ -1,7 +1,10 @@
 from datetime import date
 from dominio.empleado import Empleado
 from persistencia.empleado_dao import EmpleadoDAO
-from complementos.complementos import limpiar_pantalla
+from complementos.complementos import (
+    limpiar_pantalla, OperacionCancelada, pedir_texto_obligatorio,
+    pedir_correo, pedir_fecha, pedir_numero,
+)
 
 
 def mostrar_menu_empleado():
@@ -14,6 +17,45 @@ def mostrar_menu_empleado():
     print("0. Volver al menu principal")
 
 
+def _validar_correo_disponible(correo):
+    """Devuelve un mensaje si el correo ya esta usado; None si esta libre."""
+    if EmpleadoDAO.buscar_por_correo(correo) is not None:
+        return "Ya existe un empleado con ese correo. Ingrese otro."
+    return None
+
+
+def registrar_empleado():
+    """Formulario de registro: cada campo se valida y se repite hasta ser correcto.
+
+    Nada se guarda hasta que TODOS los datos son validos. Escribir
+    'cancelar' en cualquier campo sale del formulario sin guardar.
+    """
+    print("Registro de empleado (escriba 'cancelar' para salir sin guardar)")
+    try:
+        nombre = pedir_texto_obligatorio("Nombre", "un nombre")
+        direccion = pedir_texto_obligatorio("Direccion", "una direccion")
+        numero = pedir_texto_obligatorio("Numero de telefono", "un numero de telefono")
+        correo = pedir_correo("Correo", _validar_correo_disponible)
+        fecha_contrato = pedir_fecha("Fecha de contrato (AAAA-MM-DD)")
+        salario = pedir_numero("Salario", minimo=0,
+                               mensaje_minimo="El salario no puede ser negativo.")
+        cargo = pedir_texto_obligatorio("Cargo", "un cargo")
+
+        empleado = Empleado(nombre, direccion, numero, correo,
+                            fecha_contrato, salario, cargo)
+        EmpleadoDAO.insertar(empleado)
+        print("Empleado registrado correctamente. ID:", empleado._id)
+        return empleado
+    except OperacionCancelada:
+        print("Registro cancelado. No se guardo ningun dato.")
+    except ValueError as error:
+        print("Datos incorrectos:", error)
+    except Exception as error:
+        print("No se pudo guardar el empleado. Revise la conexion e intente de nuevo.")
+        print("Detalle:", error)
+    return None
+
+
 def main_empleado():
     while True:
         limpiar_pantalla()
@@ -22,21 +64,7 @@ def main_empleado():
         limpiar_pantalla()
 
         if opcion == "1":
-            try:
-                nombre = input("Nombre: ").strip()
-                direccion = input("Direccion: ").strip()
-                numero = input("Numero de telefono: ").strip()
-                correo = input("Correo: ").strip()
-                fecha_contrato = date.fromisoformat(input("Fecha de contrato (AAAA-MM-DD): ").strip())
-                salario = float(input("Salario: "))
-                cargo = input("Cargo: ").strip()
-                empleado = Empleado(nombre, direccion, numero, correo, fecha_contrato, salario, cargo)
-                EmpleadoDAO.insertar(empleado)
-                print("Empleado registrado con ID:", empleado._id)
-            except ValueError as error:
-                print("Datos incorrectos:", error)
-            except Exception as error:
-                print("Error al registrar el empleado:", error)
+            registrar_empleado()
 
         elif opcion == "2":
             try:
@@ -85,6 +113,12 @@ def main_empleado():
                     print("No ingresaste cambios.")
                     input("\nPresione Enter para continuar...")
                     continue
+                if correo:
+                    otro = EmpleadoDAO.buscar_por_correo(correo)
+                    if otro is not None and otro._id != empleado._id:
+                        print("Ya existe otro empleado con ese correo. No se guardaron cambios.")
+                        input("\nPresione Enter para continuar...")
+                        continue
                 fecha = date.fromisoformat(fecha_texto) if fecha_texto else empleado._fecha_contrato
                 salario = float(salario_texto) if salario_texto else empleado._salario
                 actualizado = Empleado(

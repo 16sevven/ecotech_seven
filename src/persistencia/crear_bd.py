@@ -1,6 +1,33 @@
 from persistencia.conexion import abrir_conexion, obtener_motor
 
 
+def _asegurar_correo_unico(cursor):
+    """Respalda en la base de datos la regla 'un correo = un empleado'.
+
+    Se crea como indice UNIQUE aparte (en vez de ponerlo dentro del
+    CREATE TABLE) para que tambien se aplique en bases que ya existian,
+    ya que CREATE TABLE IF NOT EXISTS no modifica tablas antiguas.
+    """
+    try:
+        if obtener_motor() == "sqlite":
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_empleado_correo "
+                "ON empleado(correo)"
+            )
+        else:
+            cursor.execute(
+                "SHOW INDEX FROM empleado WHERE Key_name = 'ux_empleado_correo'"
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    "CREATE UNIQUE INDEX ux_empleado_correo ON empleado(correo)"
+                )
+    except Exception as error:
+        print("Aviso: no se pudo crear la restriccion UNIQUE del correo "
+              "(puede haber correos repetidos en la tabla empleado).")
+        print("Detalle:", error)
+
+
 def crear_tablas():
     conexion = None
     try:
@@ -118,6 +145,7 @@ def crear_tablas():
             ]
         for sql in tablas:
             cursor.execute(sql)
+        _asegurar_correo_unico(cursor)
         conexion.commit()
     except Exception:
         if conexion:

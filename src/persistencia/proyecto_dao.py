@@ -134,6 +134,24 @@ class ProyectoDao:
         return ProyectoDao._fila_a_proyecto(fila, cargar_relaciones)
 
     @staticmethod
+    def buscar_por_nombre(nombre, cargar_relaciones=True):
+        conexion = abrir_conexion()
+        try:
+            cursor = conexion.cursor()
+            marca = marcador_sql()
+            cursor.execute(
+                "SELECT id, nombre, fecha_inicio, descripcion FROM proyecto "
+                f"WHERE LOWER(nombre) = LOWER({marca})",
+                (nombre.strip(),)
+            )
+            fila = cursor.fetchone()
+        finally:
+            conexion.close()
+        if fila is None:
+            return None
+        return ProyectoDao._fila_a_proyecto(fila, cargar_relaciones)
+
+    @staticmethod
     def listar():
         conexion = abrir_conexion()
         try:

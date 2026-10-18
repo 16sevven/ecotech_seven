@@ -121,6 +121,28 @@ class EmpleadoDAO:
             if conexion:
                 conexion.close()
 
+    @staticmethod
+    def buscar_por_correo(correo):
+        """Devuelve el empleado con ese correo (sin distinguir mayusculas) o None."""
+        conexion = None
+        try:
+            conexion = abrir_conexion()
+            cursor = conexion.cursor()
+            marca = marcador_sql()
+            sql = (
+                "SELECT id, nombre, direccion, numero, correo, "
+                "fecha_contrato, salario, cargo "
+                f"FROM empleado WHERE LOWER(correo) = LOWER({marca})"
+            )
+            cursor.execute(sql, (correo.strip(),))
+            fila = cursor.fetchone()
+            if fila is None:
+                return None
+            return EmpleadoDAO._fila_a_empleado(fila)
+        finally:
+            if conexion:
+                conexion.close()
+
     def listar():
         conexion = None
         try:
