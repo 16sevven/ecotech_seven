@@ -1,9 +1,5 @@
 """Semilla de datos ficticios para EcoTech.
 
-Ejecutar desde la carpeta principal del proyecto:
-
-    python src/semilla_bd.py
-
 Se puede ejecutar varias veces: ANTES de insertar cada dato se comprueba
 si ya existe (por correo, nombre o combinacion de campos), asi que la
 segunda ejecucion no crea duplicados.
@@ -73,7 +69,6 @@ TABLAS = [
     "departamento_empleado", "departamento_proyecto", "proyecto_empleado",
 ]
 
-
 # ------------------------------------------------------------- utilidades
 def contar_filas():
     """Cuenta las filas de cada tabla (los nombres vienen de la lista fija TABLAS)."""
@@ -88,7 +83,6 @@ def contar_filas():
     finally:
         conexion.close()
 
-
 # ---------------------------------------------------------------- cargas
 def cargar_departamentos():
     departamentos = {}
@@ -102,7 +96,6 @@ def cargar_departamentos():
         print(f"Creado departamento: {nombre}")
         departamentos[nombre] = departamento
     return departamentos
-
 
 def cargar_empleados(departamentos):
     empleados = {}
@@ -123,7 +116,6 @@ def cargar_empleados(departamentos):
             print(f"  Vinculado a {nombre_depto}: {correo}")
     return empleados
 
-
 def asignar_gerentes(departamentos, empleados):
     for nombre_depto, correo in GERENTES.items():
         departamento = departamentos[nombre_depto]
@@ -134,7 +126,6 @@ def asignar_gerentes(departamentos, empleados):
         departamento._id_gerente = gerente._id
         DepartamentoDAO.actualizar(departamento)
         print(f"Gerente asignado en {nombre_depto}: {correo}")
-
 
 def cargar_proyectos(departamentos, empleados):
     proyectos = {}
@@ -153,7 +144,6 @@ def cargar_proyectos(departamentos, empleados):
                 print(f"  Asignado a {nombre}: {correo}")
     return proyectos
 
-
 def cargar_registros(empleados, proyectos):
     for correo, nombre_proyecto, fecha, horas, descripcion in REGISTROS:
         empleado = empleados[correo]
@@ -168,14 +158,12 @@ def cargar_registros(empleados, proyectos):
         else:
             print(f"No se pudo crear el registro de {correo} ({descripcion})")
 
-
 def mostrar_resumen(antes, despues):
     print("\n===== RESUMEN =====")
     print(f"{'Tabla':<24}{'Antes':>7}{'Despues':>9}{'Nuevos':>8}")
     for tabla in TABLAS:
         nuevos = despues[tabla] - antes[tabla]
         print(f"{tabla:<24}{antes[tabla]:>7}{despues[tabla]:>9}{nuevos:>8}")
-
 
 def main():
     crear_tablas()
@@ -186,7 +174,6 @@ def main():
     proyectos = cargar_proyectos(departamentos, empleados)
     cargar_registros(empleados, proyectos)
     mostrar_resumen(antes, contar_filas())
-
 
 if __name__ == "__main__":
     try:
