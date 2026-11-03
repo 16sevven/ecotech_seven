@@ -42,4 +42,4 @@ class GestionDepartamento:
         for departamento in self._departamentos:
             if departamento._nombre.lower() == nombre.strip().lower():
                 return departamento
-        return False
+        return False

@@ -1,10 +1,8 @@
 from datetime import date
 from dominio.empleado import Empleado
 from persistencia.empleado_dao import EmpleadoDAO
-from complementos.complementos import (
-    limpiar_pantalla, OperacionCancelada, pedir_texto_obligatorio,
-    pedir_correo, pedir_fecha, pedir_numero,
-)
+from complementos.complementos import limpiar_pantalla, OperacionCancelada
+from entradas import pedir_dato
 
 
 def mostrar_menu_empleado():
@@ -17,11 +15,12 @@ def mostrar_menu_empleado():
     print("0. Volver al menu principal")
 
 
-def _validar_correo_disponible(correo):
-    """Devuelve un mensaje si el correo ya esta usado; None si esta libre."""
+def _validar_correo_nuevo(texto):
+    """Formato valido (regla de Empleado) y que no este usado por otro empleado."""
+    correo = Empleado.validar_correo(texto)
     if EmpleadoDAO.buscar_por_correo(correo) is not None:
-        return "Ya existe un empleado con ese correo. Ingrese otro."
-    return None
+        raise ValueError("Ya existe un empleado con ese correo. Ingrese otro.")
+    return correo
 
 
 def registrar_empleado():
@@ -32,14 +31,14 @@ def registrar_empleado():
     """
     print("Registro de empleado (escriba 'cancelar' para salir sin guardar)")
     try:
-        nombre = pedir_texto_obligatorio("Nombre", "un nombre")
-        direccion = pedir_texto_obligatorio("Direccion", "una direccion")
-        numero = pedir_texto_obligatorio("Numero de telefono", "un numero de telefono")
-        correo = pedir_correo("Correo", _validar_correo_disponible)
-        fecha_contrato = pedir_fecha("Fecha de contrato (AAAA-MM-DD)")
-        salario = pedir_numero("Salario", minimo=0,
-                               mensaje_minimo="El salario no puede ser negativo.")
-        cargo = pedir_texto_obligatorio("Cargo", "un cargo")
+        nombre = pedir_dato("Nombre: ", Empleado.validar_nombre, permitir_cancelar=True)
+        direccion = pedir_dato("Direccion: ", Empleado.validar_direccion, permitir_cancelar=True)
+        numero = pedir_dato("Numero de telefono: ", Empleado.validar_numero, permitir_cancelar=True)
+        correo = pedir_dato("Correo: ", _validar_correo_nuevo, permitir_cancelar=True)
+        fecha_contrato = pedir_dato("Fecha de contrato (AAAA-MM-DD): ",
+                                    Empleado.validar_fecha_contrato, permitir_cancelar=True)
+        salario = pedir_dato("Salario: ", Empleado.validar_salario, permitir_cancelar=True)
+        cargo = pedir_dato("Cargo: ", Empleado.validar_cargo, permitir_cancelar=True)
 
         empleado = Empleado(nombre, direccion, numero, correo,
                             fecha_contrato, salario, cargo)

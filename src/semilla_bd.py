@@ -1,10 +1,15 @@
 """Semilla de datos ficticios para EcoTech.
 
+Ejecutar desde la carpeta principal del proyecto:
+
+    python src/semilla_bd.py
+
 Se puede ejecutar varias veces: ANTES de insertar cada dato se comprueba
 si ya existe (por correo, nombre o combinacion de campos), asi que la
 segunda ejecucion no crea duplicados.
 """
 from datetime import date
+from getpass import getpass
 
 from persistencia.conexion import abrir_conexion
 from persistencia.crear_bd import crear_tablas
@@ -16,6 +21,10 @@ from dominio.departamento import Departamento
 from dominio.empleado import Empleado
 from dominio.proyecto import Proyecto
 from dominio.registroTiempo import RegistroTiempo
+from dominio.usuario import Usuario
+from entradas import pedir_dato
+from persistencia.usuario_dao import UsuarioDAO
+from servicios.autenticacion import registrar_usuario
 
 # ---------------------------------------------------------------- datos
 DEPARTAMENTOS = ["Recursos Humanos", "Desarrollo", "Operaciones"]
@@ -64,10 +73,15 @@ REGISTROS = [
     ("felipe.araya@ecotech.example", "Plan de reciclaje", date(2026, 4, 9), 6, "Instalacion de contenedores"),
 ]
 
+# Empleado y cuenta inicial de acceso al sistema
+ADMIN_CORREO = "admin@ecotech.example"
+ADMIN_USUARIO = "admin"
+
 TABLAS = [
-    "empleado", "departamento", "proyecto", "registro_tiempo",
+    "empleado", "usuario", "departamento", "proyecto", "registro_tiempo",
     "departamento_empleado", "departamento_proyecto", "proyecto_empleado",
 ]
+
 
 # ------------------------------------------------------------- utilidades
 def contar_filas():
@@ -83,6 +97,7 @@ def contar_filas():
     finally:
         conexion.close()
 
+
 # ---------------------------------------------------------------- cargas
 def cargar_departamentos():
     departamentos = {}
@@ -96,6 +111,7 @@ def cargar_departamentos():
         print(f"Creado departamento: {nombre}")
         departamentos[nombre] = departamento
     return departamentos
+
 
 def cargar_empleados(departamentos):
     empleados = {}
@@ -116,6 +132,7 @@ def cargar_empleados(departamentos):
             print(f"  Vinculado a {nombre_depto}: {correo}")
     return empleados
 
+
 def asignar_gerentes(departamentos, empleados):
     for nombre_depto, correo in GERENTES.items():
         departamento = departamentos[nombre_depto]
@@ -126,6 +143,7 @@ def asignar_gerentes(departamentos, empleados):
         departamento._id_gerente = gerente._id
         DepartamentoDAO.actualizar(departamento)
         print(f"Gerente asignado en {nombre_depto}: {correo}")
+
 
 def cargar_proyectos(departamentos, empleados):
     proyectos = {}
@@ -144,6 +162,7 @@ def cargar_proyectos(departamentos, empleados):
                 print(f"  Asignado a {nombre}: {correo}")
     return proyectos
 
+
 def cargar_registros(empleados, proyectos):
     for correo, nombre_proyecto, fecha, horas, descripcion in REGISTROS:
         empleado = empleados[correo]
@@ -158,12 +177,46 @@ def cargar_registros(empleados, proyectos):
         else:
             print(f"No se pudo crear el registro de {correo} ({descripcion})")
 
+
+def cargar_cuenta_admin():
+    """Prepara el empleado y la cuenta 'admin' para poder iniciar sesion.
+
+    - Empleado: se busca por su correo estable; si falta, se crea.
+    - Cuenta: si ya existe se CONSERVA (mismo ID y mismo hash, sin pedir
+      clave). Solo si falta se pide una clave por teclado (sin mostrarla)
+      y se registra con el id_empleado recuperado.
+    """
+    empleado = EmpleadoDAO.buscar_por_correo(ADMIN_CORREO)
+    if empleado is None:
+        empleado = Empleado("Administrador EcoTech", "Oficina central EcoTech",
+                            "+56911110000", ADMIN_CORREO, date(2020, 1, 1),
+                            2500000, "Administrador del sistema")
+        EmpleadoDAO.insertar(empleado)
+        print(f"Creado empleado: {ADMIN_CORREO}")
+    else:
+        print(f"Ya existe empleado: {ADMIN_CORREO}")
+
+    if UsuarioDAO.buscar_por_empleado(empleado._id) is not None \
+            or UsuarioDAO.buscar_por_nombre(ADMIN_USUARIO) is not None:
+        print(f"Ya existe la cuenta {ADMIN_USUARIO} (se conserva su hash).")
+        return
+
+    print(f"Defina la clave de la cuenta {ADMIN_USUARIO} (no se mostrara en pantalla).")
+    clave = pedir_dato("Clave: ", Usuario.validar_clave, getpass)
+    if clave != getpass("Repita la clave: "):
+        print("Las claves no coinciden. No se creo la cuenta; ejecute la semilla otra vez.")
+        return
+    usuario_id = registrar_usuario(empleado._id, ADMIN_USUARIO, clave)
+    print(f"Creada cuenta {ADMIN_USUARIO} (ID {usuario_id}) para el empleado {empleado._id}")
+
+
 def mostrar_resumen(antes, despues):
     print("\n===== RESUMEN =====")
     print(f"{'Tabla':<24}{'Antes':>7}{'Despues':>9}{'Nuevos':>8}")
     for tabla in TABLAS:
         nuevos = despues[tabla] - antes[tabla]
         print(f"{tabla:<24}{antes[tabla]:>7}{despues[tabla]:>9}{nuevos:>8}")
+
 
 def main():
     crear_tablas()
@@ -173,7 +226,9 @@ def main():
     asignar_gerentes(departamentos, empleados)
     proyectos = cargar_proyectos(departamentos, empleados)
     cargar_registros(empleados, proyectos)
+    cargar_cuenta_admin()
     mostrar_resumen(antes, contar_filas())
+
 
 if __name__ == "__main__":
     try:

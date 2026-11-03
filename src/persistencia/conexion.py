@@ -28,4 +28,4 @@ def abrir_conexion():
             database=os.getenv("DB_NAME"),
             charset="utf8mb4",
         )
-    raise ValueError(f"Motor no soportado: {motor}")
+    raise ValueError(f"Motor no soportado: {motor}")
