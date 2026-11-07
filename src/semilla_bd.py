@@ -9,7 +9,6 @@ si ya existe (por correo, nombre o combinacion de campos), asi que la
 segunda ejecucion no crea duplicados.
 """
 from datetime import date
-from getpass import getpass
 
 from persistencia.conexion import abrir_conexion
 from persistencia.crear_bd import crear_tablas
@@ -22,7 +21,8 @@ from dominio.empleado import Empleado
 from dominio.proyecto import Proyecto
 from dominio.registroTiempo import RegistroTiempo
 from dominio.usuario import Usuario
-from entradas import pedir_dato
+from complementos.complementos import OperacionCancelada
+from entradas import pedir_clave_confirmada
 from persistencia.usuario_dao import UsuarioDAO
 from servicios.autenticacion import registrar_usuario
 
@@ -52,14 +52,16 @@ GERENTES = {
     "Operaciones": "elena.paredes@ecotech.example",
 }
 
-# (nombre, fecha_inicio, descripcion, departamento, correos de empleados asignados)
+# (nombre, fecha_inicio, descripcion, departamento, correos asignados, presupuesto en CLP)
 PROYECTOS = [
     ("Panel solar monitoreado", date(2026, 2, 1),
      "Monitoreo en linea de paneles solares de las oficinas.", "Desarrollo",
-     ["bruno.rojas@ecotech.example", "carla.soto@ecotech.example", "diego.mena@ecotech.example"]),
+     ["bruno.rojas@ecotech.example", "carla.soto@ecotech.example", "diego.mena@ecotech.example"],
+     12000000),
     ("Plan de reciclaje", date(2026, 3, 15),
      "Puntos de reciclaje y reporte mensual de residuos.", "Operaciones",
-     ["elena.paredes@ecotech.example", "felipe.araya@ecotech.example", "diego.mena@ecotech.example"]),
+     ["elena.paredes@ecotech.example", "felipe.araya@ecotech.example", "diego.mena@ecotech.example"],
+     8500000),
 ]
 
 # (correo empleado, nombre proyecto, fecha, horas, descripcion)
@@ -147,12 +149,17 @@ def asignar_gerentes(departamentos, empleados):
 
 def cargar_proyectos(departamentos, empleados):
     proyectos = {}
-    for nombre, fecha, descripcion, nombre_depto, correos in PROYECTOS:
+    for nombre, fecha, descripcion, nombre_depto, correos, presupuesto in PROYECTOS:
         proyecto = ProyectoDao.buscar_por_nombre(nombre, cargar_relaciones=False)
         if proyecto is not None:
             print(f"Ya existe proyecto: {nombre}")
+            if proyecto._presupuesto_clp == 0:     # solo completa si estaba sin presupuesto
+                proyecto._presupuesto_clp = Proyecto.validar_presupuesto(presupuesto)
+                ProyectoDao.actualizar(proyecto)
+                print(f"  Presupuesto asignado: ${Proyecto.formatear_clp(presupuesto)} CLP")
         else:
-            proyecto = ProyectoDao.insertar(Proyecto(nombre, fecha, descripcion))
+            proyecto = ProyectoDao.insertar(
+                Proyecto(nombre, fecha, descripcion, presupuesto_clp=presupuesto))
             print(f"Creado proyecto: {nombre}")
         proyectos[nombre] = proyecto
         if DepartamentoDAO.agregar_proyecto(departamentos[nombre_depto], proyecto):
@@ -201,10 +208,11 @@ def cargar_cuenta_admin():
         print(f"Ya existe la cuenta {ADMIN_USUARIO} (se conserva su hash).")
         return
 
-    print(f"Defina la clave de la cuenta {ADMIN_USUARIO} (no se mostrara en pantalla).")
-    clave = pedir_dato("Clave: ", Usuario.validar_clave, getpass)
-    if clave != getpass("Repita la clave: "):
-        print("Las claves no coinciden. No se creo la cuenta; ejecute la semilla otra vez.")
+    print(f"Defina la clave de la cuenta {ADMIN_USUARIO}.")
+    try:
+        clave = pedir_clave_confirmada(Usuario.validar_clave, "Clave: ", "Repita la clave: ")
+    except OperacionCancelada:
+        print("Cuenta no creada. Ejecute la semilla otra vez cuando quiera crearla.")
         return
     usuario_id = registrar_usuario(empleado._id, ADMIN_USUARIO, clave)
     print(f"Creada cuenta {ADMIN_USUARIO} (ID {usuario_id}) para el empleado {empleado._id}")

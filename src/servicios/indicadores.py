@@ -4,12 +4,13 @@ Este modulo SOLO obtiene y valida datos. Mostrarlos es responsabilidad
 de quien lo llama (ver menus/menu_indicador.py).
 """
 import math
-from datetime import datetime
+from datetime import date, datetime
 
 import requests
 
 URL_DOLAR = "https://mindicador.cl/api/dolar"
 TIMEOUT = (3, 5)          # (segundos para conectar, segundos para leer)
+DIAS_MAX_ANTIGUEDAD = 7   # mas antiguo que esto se advierte como posiblemente desactualizado
 
 
 def obtener_datos(url=URL_DOLAR):
@@ -58,3 +59,20 @@ def extraer_primero(datos):
     ):
         raise ValueError("Valor del indicador invalido.")
     return _validar_fecha(registro.get("fecha")), valor
+
+
+def obtener_dolar():
+    """Consulta la API y devuelve el dolar observado YA VALIDADO.
+
+    Devuelve un dict con valor, fecha, unidad y origen. Puede lanzar
+    requests.exceptions.RequestException (red/HTTP/JSON) o
+    ValueError/KeyError/TypeError (datos invalidos): lo controla quien llama.
+    """
+    fecha, valor = extraer_primero(obtener_datos())
+    return {"valor": valor, "fecha": fecha, "unidad": "CLP por USD", "origen": URL_DOLAR}
+
+
+def dias_de_antiguedad(fecha, hoy=None):
+    """Dias entre la fecha del indicador (AAAA-MM-DD) y hoy; nunca negativo."""
+    hoy = hoy or date.today()
+    return max((hoy - date.fromisoformat(fecha)).days, 0)

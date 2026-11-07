@@ -1,6 +1,26 @@
 from persistencia.conexion import abrir_conexion, obtener_motor
 
 
+def _asegurar_columna_presupuesto(cursor):
+    """Agrega proyecto.presupuesto_clp a bases creadas antes de esta version.
+
+    CREATE TABLE IF NOT EXISTS no modifica tablas que ya existen, por eso
+    se comprueba la columna y se agrega con ALTER TABLE si falta.
+    """
+    if obtener_motor() == "sqlite":
+        cursor.execute("PRAGMA table_info(proyecto)")
+        if "presupuesto_clp" not in [fila[1] for fila in cursor.fetchall()]:
+            cursor.execute(
+                "ALTER TABLE proyecto ADD COLUMN presupuesto_clp REAL NOT NULL DEFAULT 0"
+            )
+    else:
+        cursor.execute("SHOW COLUMNS FROM proyecto LIKE 'presupuesto_clp'")
+        if cursor.fetchone() is None:
+            cursor.execute(
+                "ALTER TABLE proyecto ADD COLUMN presupuesto_clp DECIMAL(14, 2) NOT NULL DEFAULT 0"
+            )
+
+
 def _asegurar_correo_unico(cursor):
     """Respalda en la base de datos la regla 'un correo = un empleado'.
 
@@ -61,7 +81,8 @@ def crear_tablas():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nombre TEXT NOT NULL,
                     fecha_inicio TEXT NOT NULL,
-                    descripcion TEXT NOT NULL
+                    descripcion TEXT NOT NULL,
+                    presupuesto_clp REAL NOT NULL DEFAULT 0
                 )""",
                 """CREATE TABLE IF NOT EXISTS registro_tiempo (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,7 +144,8 @@ def crear_tablas():
                     id INT PRIMARY KEY AUTO_INCREMENT,
                     nombre VARCHAR(100) NOT NULL,
                     fecha_inicio DATE NOT NULL,
-                    descripcion TEXT NOT NULL
+                    descripcion TEXT NOT NULL,
+                    presupuesto_clp DECIMAL(14, 2) NOT NULL DEFAULT 0
                 )""",
                 """CREATE TABLE IF NOT EXISTS registro_tiempo (
                     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -159,6 +181,7 @@ def crear_tablas():
             ]
         for sql in tablas:
             cursor.execute(sql)
+        _asegurar_columna_presupuesto(cursor)
         _asegurar_correo_unico(cursor)
         conexion.commit()
     except Exception:

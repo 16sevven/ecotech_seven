@@ -1,9 +1,7 @@
-from getpass import getpass
-
 from complementos.complementos import limpiar_pantalla, OperacionCancelada
 from dominio.Gestion_departamento import GestionDepartamento
 from dominio.usuario import Usuario
-from entradas import pedir_dato
+from entradas import leer_clave, pedir_clave_confirmada, pedir_dato
 from menus.menu_dominio_departamento import menu_dominio_departamento
 from menus.menu_dominio_empleado import menu_dominio_empleado
 from menus.menu_dominio_gestionDepartamento import menu_dominio_gestionDepartamento
@@ -26,10 +24,7 @@ def solicitar_registro():
     try:
         empleado_id = pedir_dato("ID del empleado: ", _validar_id, permitir_cancelar=True)
         nombre = pedir_dato("Nuevo usuario: ", Usuario.normalizar_usuario, permitir_cancelar=True)
-        clave = pedir_dato("Contrasena: ", Usuario.validar_clave, getpass)
-        if clave != getpass("Repita la contrasena: "):
-            print("Las contrasenas no coinciden. Vuelva al registro.")
-            return None
+        clave = pedir_clave_confirmada(Usuario.validar_clave)
         usuario_id = registrar_usuario(empleado_id, nombre, clave)
     except OperacionCancelada:
         print("Registro cancelado. No se guardo ninguna cuenta.")
@@ -47,7 +42,7 @@ def solicitar_registro():
 def solicitar_login():
     """Pide credenciales. Devuelve los datos publicos de la cuenta o None."""
     nombre = input("Usuario: ")
-    clave = getpass("Contrasena: ")
+    clave = leer_clave("Contrasena: ")
     try:
         usuario = autenticar(nombre, clave)
     except (TypeError, ValueError):

@@ -1,7 +1,20 @@
-from complementos.complementos import limpiar_pantalla
+from complementos.complementos import limpiar_pantalla, OperacionCancelada
+from entradas import pedir_dato
 from datetime import date
 from dominio.proyecto import Proyecto
 from persistencia.proyecto_dao import ProyectoDao
+
+
+def _presupuesto_opcional(texto):
+    """Vacio = sin cambios (None); si no, debe ser un presupuesto valido."""
+    if str(texto).strip() == "":
+        return None
+    return Proyecto.validar_presupuesto(texto)
+
+
+def _linea_proyecto(p):
+    return (f"ID: {p._id_proyecto} | {p._nombre} | Inicio: {p._fecha_inicio} | {p._descripcion} "
+            f"| Presupuesto: ${Proyecto.formatear_clp(p._presupuesto_clp)} CLP")
 
 
 def mostrar_menu_proyecto():
@@ -30,9 +43,13 @@ def main_proyecto():
                     print("Nombre y descripcion son obligatorios.")
                     input("\nPresione Enter para continuar...")
                     continue
-                proyecto = Proyecto(nombre, fecha_inicio, descripcion)
+                presupuesto = pedir_dato("Presupuesto en CLP (0 si aun no tiene): ",
+                                         Proyecto.validar_presupuesto, permitir_cancelar=True)
+                proyecto = Proyecto(nombre, fecha_inicio, descripcion, presupuesto_clp=presupuesto)
                 ProyectoDao.insertar(proyecto)
                 print("Proyecto registrado con ID:", proyecto._id_proyecto)
+            except OperacionCancelada:
+                print("Registro cancelado. No se guardo ningun dato.")
             except ValueError:
                 print("Fecha incorrecta. Usa AAAA-MM-DD.")
             except Exception as error:
@@ -45,7 +62,7 @@ def main_proyecto():
                     print("No hay proyectos registrados.")
                 else:
                     for p in proyectos:
-                        print(f"ID: {p._id_proyecto} | {p._nombre} | Inicio: {p._fecha_inicio} | {p._descripcion}")
+                        print(_linea_proyecto(p))
             except Exception as error:
                 print("Error al listar proyectos:", error)
 
@@ -56,7 +73,7 @@ def main_proyecto():
                 if p is None:
                     print("Proyecto no encontrado.")
                 else:
-                    print(f"ID: {p._id_proyecto} | {p._nombre} | Inicio: {p._fecha_inicio} | {p._descripcion}")
+                    print(_linea_proyecto(p))
             except ValueError:
                 print("Debes ingresar un ID numerico.")
             except Exception as error:
@@ -73,7 +90,10 @@ def main_proyecto():
                 nombre = input(f"Nombre [{p._nombre}]: ").strip()
                 fecha_texto = input(f"Fecha de inicio [{p._fecha_inicio}] (AAAA-MM-DD): ").strip()
                 descripcion = input(f"Descripcion [{p._descripcion}]: ").strip()
-                if not (nombre or fecha_texto or descripcion):
+                presupuesto = pedir_dato(
+                    f"Presupuesto CLP [{Proyecto.formatear_clp(p._presupuesto_clp)}] (Enter = sin cambios): ",
+                    _presupuesto_opcional, permitir_cancelar=True)
+                if not (nombre or fecha_texto or descripcion or presupuesto is not None):
                     print("No ingresaste cambios.")
                     input("\nPresione Enter para continuar...")
                     continue
@@ -82,12 +102,15 @@ def main_proyecto():
                     nombre=nombre or p._nombre,
                     fecha_inicio=fecha,
                     descripcion=descripcion or p._descripcion,
-                    id_proyecto=p._id_proyecto
+                    id_proyecto=p._id_proyecto,
+                    presupuesto_clp=p._presupuesto_clp if presupuesto is None else presupuesto
                 )
                 if ProyectoDao.actualizar(actualizado):
                     print("Proyecto actualizado.")
                 else:
                     print("No se detectaron cambios guardados.")
+            except OperacionCancelada:
+                print("Actualizacion cancelada. No se guardo ningun cambio.")
             except ValueError:
                 print("ID o fecha incorrectos.")
             except Exception as error:

@@ -4,6 +4,7 @@ from dominio.registroTiempo import RegistroTiempo
 from persistencia.proyecto_dao import ProyectoDao
 from persistencia.empleado_dao import EmpleadoDAO
 from persistencia.registroTiempo_dao import RegistroTiempoDAO
+from menus.menu_presupuesto import mostrar_estimacion_usd
 from menus.menu_proyecto import main_proyecto
 
 
@@ -41,6 +42,7 @@ def menu_dominio_proyecto():
             if opcion == "4":
                 print("\n--- INFORME DEL PROYECTO ---")
                 print(proyecto.generar_informe())
+                mostrar_estimacion_usd(proyecto)   # dato de la API integrado al informe
                 input("\nPresione Enter para continuar...")
                 continue
 

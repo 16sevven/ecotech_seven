@@ -10,7 +10,8 @@ class ProyectoDao:
     def _fila_a_proyecto(fila, cargar_relaciones=True):
         proyecto = Proyecto(
             id_proyecto=fila[0], nombre=fila[1],
-            fecha_inicio=fila[2], descripcion=fila[3]
+            fecha_inicio=fila[2], descripcion=fila[3],
+            presupuesto_clp=fila[4]
         )
         if not cargar_relaciones:
             return proyecto
@@ -61,8 +62,8 @@ class ProyectoDao:
             cursor = conexion.cursor()
             marca = marcador_sql()
             cursor.execute(
-                f"INSERT INTO proyecto (nombre, fecha_inicio, descripcion) VALUES ({marca}, {marca}, {marca})",
-                (proyecto._nombre, proyecto._fecha_inicio, proyecto._descripcion)
+                f"INSERT INTO proyecto (nombre, fecha_inicio, descripcion, presupuesto_clp) VALUES ({marca}, {marca}, {marca}, {marca})",
+                (proyecto._nombre, proyecto._fecha_inicio, proyecto._descripcion, proyecto._presupuesto_clp)
             )
             conexion.commit()
             proyecto._id_proyecto = cursor.lastrowid
@@ -83,8 +84,8 @@ class ProyectoDao:
             cursor = conexion.cursor()
             marca = marcador_sql()
             cursor.execute(
-                f"UPDATE proyecto SET nombre = {marca}, fecha_inicio = {marca}, descripcion = {marca} WHERE id = {marca}",
-                (proyecto._nombre, proyecto._fecha_inicio, proyecto._descripcion, proyecto._id_proyecto)
+                f"UPDATE proyecto SET nombre = {marca}, fecha_inicio = {marca}, descripcion = {marca}, presupuesto_clp = {marca} WHERE id = {marca}",
+                (proyecto._nombre, proyecto._fecha_inicio, proyecto._descripcion, proyecto._presupuesto_clp, proyecto._id_proyecto)
             )
             actualizado = cursor.rowcount > 0
             conexion.commit()
@@ -123,7 +124,7 @@ class ProyectoDao:
             cursor = conexion.cursor()
             marca = marcador_sql()
             cursor.execute(
-                f"SELECT id, nombre, fecha_inicio, descripcion FROM proyecto WHERE id = {marca}",
+                f"SELECT id, nombre, fecha_inicio, descripcion, presupuesto_clp FROM proyecto WHERE id = {marca}",
                 (id_proyecto,)
             )
             fila = cursor.fetchone()
@@ -140,7 +141,7 @@ class ProyectoDao:
             cursor = conexion.cursor()
             marca = marcador_sql()
             cursor.execute(
-                "SELECT id, nombre, fecha_inicio, descripcion FROM proyecto "
+                "SELECT id, nombre, fecha_inicio, descripcion, presupuesto_clp FROM proyecto "
                 f"WHERE LOWER(nombre) = LOWER({marca})",
                 (nombre.strip(),)
             )
@@ -156,7 +157,7 @@ class ProyectoDao:
         conexion = abrir_conexion()
         try:
             cursor = conexion.cursor()
-            cursor.execute("SELECT id, nombre, fecha_inicio, descripcion FROM proyecto")
+            cursor.execute("SELECT id, nombre, fecha_inicio, descripcion, presupuesto_clp FROM proyecto")
             filas = cursor.fetchall()
         finally:
             conexion.close()
